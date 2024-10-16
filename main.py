@@ -1,3 +1,5 @@
+import os
+import psutil
 from threading import Thread, Event
 from time import sleep
 from logger import logger
@@ -6,6 +8,41 @@ from stray import SystemTray
 from watcher import Watcher
 
 LOG_PREFIX = "watcher.py"
+
+def is_watcher_already_running():
+    current_process_id = os.getpid()    
+    current_process = psutil.Process(current_process_id)
+    current_process_description = Watcher.get_process_description(current_process)
+    
+    logger.debug(f'{LOG_PREFIX:<20} current_process_id: {current_process_id}')
+    logger.debug(f'{LOG_PREFIX:<20} current_process: {current_process}')
+    logger.debug(f'{LOG_PREFIX:<20} current_process_description: {current_process_description}')
+    
+    already_running = False
+
+    for process in psutil.process_iter():
+        try:
+            if process.pid == current_process_id:
+                continue
+            
+            process_description = Watcher.get_process_description(process)
+            
+            if not process_description:
+                process_description = process.name()
+            
+            if current_process_description == process_description and current_process.username() == process.username():
+                already_running = True
+                logger.debug(f'{LOG_PREFIX:<20} process_counter: {already_running}')
+                logger.debug(f'{LOG_PREFIX:<20} process.pid: {process.pid}')
+                logger.debug(f'{LOG_PREFIX:<20} process: {process}')
+                logger.debug(f'{LOG_PREFIX:<20} process_description: {process_description}')
+                    
+                return already_running
+                
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+
+    return already_running
 
 def run():
     stop_event  = Event()
@@ -27,14 +64,14 @@ def run():
 def infinity_run():
     restart_counter = 0
     while True:
-        logger.info(f'{LOG_PREFIX:<20} Starting program')
+        logger.info(f'{LOG_PREFIX:<20} Starting Threads')
         
         if restart_counter != 0:
             logger.warning(f'{LOG_PREFIX:<20} restart_counter: {restart_counter}')
             
         stop_event, watcher, reporter, stray = run()
         
-        logger.info(f'{LOG_PREFIX:<20} Program started')
+        logger.info(f'{LOG_PREFIX:<20} Threads started')
 
         while watcher[1].is_alive() and reporter[1].is_alive() and stray[1].is_alive():
             sleep(1)
@@ -57,4 +94,8 @@ def infinity_run():
         restart_counter += 1
 
 if __name__ == "__main__":
-    infinity_run()
+    logger.info(f'{LOG_PREFIX:<20} Starting program with PID {os.getpid()}')
+    if is_watcher_already_running():
+        logger.info(f"{LOG_PREFIX:<20} Watcher already running on user '{psutil.Process(os.getpid()).username()}'")
+    else:
+        infinity_run()

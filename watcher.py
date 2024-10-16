@@ -1,6 +1,5 @@
 import ctypes
 import psutil
-import os
 import win32api
 from datetime import datetime, timedelta
 from threading import Event
@@ -25,12 +24,6 @@ class Watcher():
         
         self.events_queue = EventsQueue()
         
-    def __clear_screen(self) -> None: # type: ignore
-        if os.name == 'nt':
-            os.system('cls')
-        else:
-            os.system('clear')
-        
     def __sensor_callback(self, sensor_counters: SensorCounters, sensor_event: SensorEvent) -> None:
         now = datetime.now()
         
@@ -52,33 +45,22 @@ class Watcher():
         self.user32_dll.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
 
         return psutil.Process(pid.value)
-    
-    def get_active_window_title(self) -> str:
-        hwnd = self.user32_dll.GetForegroundWindow()
-        length = self.user32_dll.GetWindowTextLengthW(hwnd)
-        buffer = ctypes.create_unicode_buffer(length + 1)
-        
-        self.user32_dll.GetWindowTextW(hwnd, buffer, length + 1)
-        
-        return str(buffer.value)
-    
-    def get_process_description(self, process: psutil.Process) -> str:
+         
+    @classmethod
+    def get_process_description(cls, process: psutil.Process) -> str:
         if process.pid == 0:
-            return str()
+            return ""
         
         try:
             file_path = process.exe()
             lang, codepage = win32api.GetFileVersionInfo(file_path, '\\VarFileInfo\\Translation')[0] # type: ignore
             description_key = f'\\StringFileInfo\\{lang:04x}{codepage:04x}\\FileDescription'
-            
+
             description = win32api.GetFileVersionInfo(file_path, description_key)
+            return str(description) if description else ""
+
         except:
-            return str()
-        
-        if description:
-            return str(win32api.GetFileVersionInfo(file_path, description_key))
-        else:
-            return str()
+            return ""
     
     def __run(self):
         logger.debug(f'{LOG_PREFIX:<20} Running Watcher')
