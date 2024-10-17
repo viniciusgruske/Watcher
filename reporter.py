@@ -8,15 +8,15 @@ from time import sleep
 from typing import Any, Dict
 
 from config import MONGODB_URL, REPORTER_INTERVAL
-from logger import logger
+from logger import logger, LOG_PID
 from objects import DatabaseCollections, EventsQueue, EventType, ReporterApp, ReporterData, ReporterUserData
 from watcher import Watcher
 
-LOG_PREFIX = "reporter.py"
+LOG_PREFIX = f"{LOG_PID} {'reporter.py':<20}"
 
 class Reporter:
     def __init__(self, watcher: Watcher, stop_event: Event) -> None:
-        logger.debug(f'{LOG_PREFIX:<20} Instantiating Reporter')
+        logger.debug(f'{LOG_PREFIX} Instantiating Reporter')
         
         self.watcher = watcher
         self.stop_event = stop_event
@@ -83,8 +83,8 @@ class Reporter:
         apps: dict[str, ReporterApp] = dict()
         
         if not apps_db:
-            logger.warning(f'{LOG_PREFIX:<20} Cannot get apps_db')
-            logger.debug(f'{LOG_PREFIX:<20} apps_db: {apps_db}')
+            logger.warning(f'{LOG_PREFIX} Cannot get apps_db')
+            logger.debug(f'{LOG_PREFIX} apps_db: {apps_db}')
             return self.data.apps
             
         for app in apps_db.values():
@@ -92,15 +92,15 @@ class Reporter:
             app_name = app.name
             
             if not app_name:
-                logger.warning(f'{LOG_PREFIX:<20} Cannot get app_name from apps_db')
-                logger.debug(f'{LOG_PREFIX:<20} app_name: {app_name}')
-                logger.debug(f'{LOG_PREFIX:<20} app: {app}')
+                logger.warning(f'{LOG_PREFIX} Cannot get app_name from apps_db')
+                logger.debug(f'{LOG_PREFIX} app_name: {app_name}')
+                logger.debug(f'{LOG_PREFIX} app: {app}')
                 continue
             
             if not app_id:
-                logger.warning(f'{LOG_PREFIX:<20} Cannot get app_id from apps_db')
-                logger.debug(f'{LOG_PREFIX:<20} app_id: {app_id}')
-                logger.debug(f'{LOG_PREFIX:<20} app: {app}')
+                logger.warning(f'{LOG_PREFIX} Cannot get app_id from apps_db')
+                logger.debug(f'{LOG_PREFIX} app_id: {app_id}')
+                logger.debug(f'{LOG_PREFIX} app: {app}')
                 continue
             
             apps[app_name] = ReporterApp(app_id, app_name)
@@ -128,14 +128,14 @@ class Reporter:
         minutes = (self.data.active_time % 3600) // 60
         seconds = self.data.active_time % 60
             
-        logger.info(f'{LOG_PREFIX:<20} Active time: {hours:02d}:{minutes:02d}:{seconds:02d}')
+        logger.info(f'{LOG_PREFIX} Active time: {hours:02d}:{minutes:02d}:{seconds:02d}')
         
     def __log_screen_time(self) -> None:
         hours = self.data.screen_time // 3600
         minutes = (self.data.screen_time % 3600) // 60
         seconds = self.data.screen_time % 60
             
-        logger.info(f'{LOG_PREFIX:<20} Screen time: {hours:02d}:{minutes:02d}:{seconds:02d}')
+        logger.info(f'{LOG_PREFIX} Screen time: {hours:02d}:{minutes:02d}:{seconds:02d}')
 
     def __update_report_apps(self, report: dict[str, Any]) -> dict[str, Any]:
         for watcher_app in self.watcher.data.apps.values():
@@ -145,8 +145,8 @@ class Reporter:
                 app_id = self.__get_or_create_app_id(watcher_app.name)
                 
                 if not app_id:
-                    logger.warning(f'{LOG_PREFIX:<20} Cannot get app_id')
-                    logger.debug(f'{LOG_PREFIX:<20} app_id: {app_id}')
+                    logger.warning(f'{LOG_PREFIX} Cannot get app_id')
+                    logger.debug(f'{LOG_PREFIX} app_id: {app_id}')
                     continue
             
             if watcher_app.name not in report['apps']:
@@ -218,7 +218,7 @@ class Reporter:
         while self.watcher.events_queue.activity:
             activity = self.watcher.events_queue.activity.popleft()
             self.events_queue.activity.append(activity)
-            logger.debug(f'{LOG_PREFIX:<20} activity: {activity}')
+            logger.debug(f'{LOG_PREFIX} activity: {activity}')
             
         if not self.events_queue.activity:
             return
@@ -235,7 +235,7 @@ class Reporter:
             documents.append(activity_dict)
             
         self.db.events.insert_many(documents)
-        logger.success(f'{LOG_PREFIX:<20} The activity events have been saved in the database')
+        logger.success(f'{LOG_PREFIX} The activity events have been saved in the database')
         
         self.events_queue.activity.clear()
         
@@ -243,7 +243,7 @@ class Reporter:
         while self.watcher.events_queue.app:
             app = self.watcher.events_queue.app.popleft()
             self.events_queue.app.append(app)
-            logger.debug(f'{LOG_PREFIX:<20} app: {app}')
+            logger.debug(f'{LOG_PREFIX} app: {app}')
             
         if not self.events_queue.app:
             return
@@ -260,7 +260,7 @@ class Reporter:
             documents.append(app_dict)
             
         self.db.events.insert_many(documents)
-        logger.success(f'{LOG_PREFIX:<20} The app events have been saved in the database')
+        logger.success(f'{LOG_PREFIX} The app events have been saved in the database')
         
         self.events_queue.app.clear()
 
@@ -268,7 +268,7 @@ class Reporter:
         while self.watcher.events_queue.sensor:
             sensor = self.watcher.events_queue.sensor.popleft()
             self.events_queue.sensor.append(sensor)
-            logger.debug(f'{LOG_PREFIX:<20} sensor: {sensor}')
+            logger.debug(f'{LOG_PREFIX} sensor: {sensor}')
             
         if not self.events_queue.sensor:
             return
@@ -285,7 +285,7 @@ class Reporter:
             documents.append(sensor_dict)
 
         self.db.events.insert_many(documents)
-        logger.success(f'{LOG_PREFIX:<20} The sensor events have been saved in the database')
+        logger.success(f'{LOG_PREFIX} The sensor events have been saved in the database')
         
         self.events_queue.sensor.clear()
 
@@ -293,13 +293,13 @@ class Reporter:
         update_one = self.db.reports.update_one(filter={'_id': report_id}, update={'$set': report}, upsert=True)
 
         if update_one.modified_count == 0:
-            logger.warning(f'{LOG_PREFIX:<20} The report data were not saved in the database: no document modified')
-            logger.debug(f'{LOG_PREFIX:<20} update_one.matched_count: {update_one.matched_count}')
-            logger.debug(f'{LOG_PREFIX:<20} update_one.modified_count: {update_one.modified_count}')
+            logger.warning(f'{LOG_PREFIX} The report data were not saved in the database: no document modified')
+            logger.debug(f'{LOG_PREFIX} update_one.matched_count: {update_one.matched_count}')
+            logger.debug(f'{LOG_PREFIX} update_one.modified_count: {update_one.modified_count}')
             return None
 
         self.last_save = datetime.now()
-        logger.success(f'{LOG_PREFIX:<20} The report data have been saved in the database')
+        logger.success(f'{LOG_PREFIX} The report data have been saved in the database')
 
     def __run(self) -> None:
         sleep(REPORTER_INTERVAL)
@@ -310,15 +310,15 @@ class Reporter:
             report = self.__get_report_db(self.data.user.id)
 
             if not report:
-                logger.warning(f'{LOG_PREFIX:<20} Cannot get report')
-                logger.debug(f'{LOG_PREFIX:<20} report: {report}')
+                logger.warning(f'{LOG_PREFIX} Cannot get report')
+                logger.debug(f'{LOG_PREFIX} report: {report}')
                 return None
 
         report_id: ObjectId | None = report.get('_id')
 
         if not report_id:
-            logger.warning(f'{LOG_PREFIX:<20} Cannot get report_id')
-            logger.debug(f'{LOG_PREFIX:<20} report_id: {report_id}')
+            logger.warning(f'{LOG_PREFIX} Cannot get report_id')
+            logger.debug(f'{LOG_PREFIX} report_id: {report_id}')
             return None
 
         report = self.__proccess_report(report)
@@ -341,7 +341,7 @@ class Reporter:
         self.db.events.insert_one(document)
 
     def run(self) -> None:
-        logger.debug(f'{LOG_PREFIX:<20} Running Reporter')
+        logger.debug(f'{LOG_PREFIX} Running Reporter')
         
         while not self.stop_event.is_set():
             try:
@@ -349,8 +349,8 @@ class Reporter:
                 user_id = self.__get_or_create_user_id(username)
                 
                 if not user_id:
-                    logger.warning(f'{LOG_PREFIX:<20} Cannot get user_id')
-                    logger.debug(f'{LOG_PREFIX:<20} user_id: {user_id}')
+                    logger.warning(f'{LOG_PREFIX} Cannot get user_id')
+                    logger.debug(f'{LOG_PREFIX} user_id: {user_id}')
                     raise Exception('Cannot get user_id')
                 
                 user = ReporterUserData(user_id, username)                
@@ -359,7 +359,7 @@ class Reporter:
                 while True:
                     self.__run()
             except ServerSelectionTimeoutError:
-                logger.warning(f'{LOG_PREFIX:<20} The data were not saved in the database: database timeout')
+                logger.warning(f'{LOG_PREFIX} The data were not saved in the database: database timeout')
             except Exception:
-                logger.exception(f'{LOG_PREFIX:<20} Exception on running ↴')
+                logger.exception(f'{LOG_PREFIX} Exception on running ↴')
                 self.stop_event.set()

@@ -3,10 +3,10 @@ from typing import Callable
 from pynput import mouse, keyboard
 
 from config import LOG_SENSOR_EVENTS, MOVE_INTERVAL, CLICK_INTERVAL, SCROLL_INTERVAL, PRESS_INTERVAL
-from logger import logger
+from logger import logger, LOG_PID
 from objects import SensorEvent, SensorCounters, SensorLast
 
-LOG_PREFIX = 'sensor.py'
+LOG_PREFIX = f"{LOG_PID} {'sensor.py':<20}"
     
 class Sensor():
     sensor_counter  = SensorCounters()
@@ -15,7 +15,7 @@ class Sensor():
     @classmethod
     def __log_counter_event(cls) -> None:
         if cls.sensor_counter.all % LOG_SENSOR_EVENTS == 0:
-            logger.info(f'{LOG_PREFIX:<20} The Sensor counted {cls.sensor_counter.all} events')
+            logger.info(f'{LOG_PREFIX} The Sensor counted {cls.sensor_counter.all} events')
 
     @classmethod
     def __is_valid_mouse_event(cls, event: SensorEvent) -> bool:
@@ -65,25 +65,25 @@ class Sensor():
     
     @classmethod
     def __log_mouse_event(cls, event: SensorEvent) -> None:
-        logger.debug(f'{LOG_PREFIX:<20} {event.name} event')
+        logger.debug(f'{LOG_PREFIX} {event.name} event')
         
         cls.__log_counter_event()
         
         if cls.sensor_counter.mouse % LOG_SENSOR_EVENTS == 0:
-            logger.info(f'{LOG_PREFIX:<20} The Sensor counted {cls.sensor_counter.mouse} mouse events')
+            logger.info(f'{LOG_PREFIX} The Sensor counted {cls.sensor_counter.mouse} mouse events')
                 
     @classmethod
     def __log_keyboard_event(cls) -> None:        
-        logger.debug(f'{LOG_PREFIX:<20} KEYBOARD_PRESS event')
+        logger.debug(f'{LOG_PREFIX} KEYBOARD_PRESS event')
     
         cls.__log_counter_event()
     
         if cls.sensor_counter.keyboard % LOG_SENSOR_EVENTS == 0:
-            logger.info(f'{LOG_PREFIX:<20} The Sensor counted {cls.sensor_counter.keyboard} keyboard events')        
+            logger.info(f'{LOG_PREFIX} The Sensor counted {cls.sensor_counter.keyboard} keyboard events')        
                     
     @classmethod
     def run(cls, callback: Callable[[SensorCounters, SensorEvent],  None], move_sensor: bool = True, click_sensor: bool = True, scroll_sensor: bool = True, press_sensor: bool = True) -> None:
-        logger.debug(f'{LOG_PREFIX:<20} Running Sensor')
+        logger.debug(f'{LOG_PREFIX} Running Sensor')
         
         # Mouse events
         def __on_move(x: int, y: int) -> bool | None:

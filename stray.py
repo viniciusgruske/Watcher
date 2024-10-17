@@ -5,16 +5,16 @@ from pystray import Icon, Menu, MenuItem # type: ignore
 from PIL import Image
 from threading import Event
 
-from logger import logger, LOG_FILE
+from logger import logger, LOG_FILE, LOG_PID
 from reporter import Reporter
 from watcher import Watcher
 
-LOG_PREFIX = 'stray.py'
+LOG_PREFIX = f"{LOG_PID} {'stray.py':<20}"
 
 
 class SystemTray():
     def __init__(self, watcher: Watcher, reporter: Reporter, stop_event: Event) -> None:
-        logger.debug(f'{LOG_PREFIX:<20} Instantiating SystemTray')
+        logger.debug(f'{LOG_PREFIX} Instantiating SystemTray')
         
         self.watcher = watcher
         self.reporter = reporter
@@ -46,11 +46,11 @@ class SystemTray():
         self.icon.menu = self.menu
         
     def __open_log_file(self) -> None:
-        logger.info(f'{LOG_PREFIX:<20} Opening log file')
+        logger.info(f'{LOG_PREFIX} Opening log file')
         os.startfile(LOG_FILE)
         
     def __update_menu(self) -> None:
-        logger.info(f'{LOG_PREFIX:<20} Updating SystemTray')
+        logger.info(f'{LOG_PREFIX} Updating SystemTray')
         self.icon.update_menu()
     
     def __get_total_active_time(self, _: MenuItem) -> str:
@@ -87,7 +87,7 @@ class SystemTray():
                     
     def run(self) -> None:
         try:
-            logger.debug(f'{LOG_PREFIX:<20} Running SystemTray')
+            logger.debug(f'{LOG_PREFIX} Running SystemTray')
             self.icon.run() # type: ignore
         except Exception as e:
             print('System Tray Exception')
